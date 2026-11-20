@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>FROMME · 기대 도착</title>
+<script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+<style>body{margin:0}#guide{position:fixed;bottom:7%;left:5%;right:5%;z-index:3;margin:auto;width:fit-content;padding:12px 18px;background:#010c20ed;color:#fbfbff;text-align:center;border-radius:5px;font:16px/1.5 sans-serif;pointer-events:none}</style></head>
+<body><p id="guide">카메라를 허용하고 카드 앞면을 비춰주세요.</p>
+<a-scene mindar-image="imageTargetSrc: ./targets.mind; uiScanning: no" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
+<a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+<a-entity id="card" mindar-image-target="targetIndex: 0"></a-entity></a-scene>
+<script>
+const card = document.querySelector('#card');
+const guide = document.querySelector('#guide');
+const orders = [
+ ['안정적인 직장은 가져야지.', -.24, .34, 8, 1200],
+ ['남들 하는 만큼은 해야지.', .24, .05, -7, 2900],
+ ['그 나이면 자리 잡아야지.', -.2, -.23, 5, 3300],
+ ['이왕이면 대기업에 가야지.', .16, -.52, -5, 3700]
+];
+function makeSlip([message]) {
+ const sheet = document.createElement('canvas');
+ sheet.width = 1024;
+ sheet.height = 256;
+ const pen = sheet.getContext('2d');
+ pen.fillStyle = '#fbfbff';
+ pen.fillRect(0,0,1024,256);
+ pen.fillStyle = '#051d46';
+ pen.font = '32px Georgia';
+ pen.fillText('FROMME  /  EXPECTATION ORDER',48,62);
+ pen.fillRect(48,85,928,2);
+ pen.font = '48px sans-serif';
+ pen.fillText(message,48,181,928);
+ const slip = document.createElement('a-plane');
+ slip.setAttribute('width', .92);
+ slip.setAttribute('height', .23);
+ slip.setAttribute('visible', false);
+ slip.setAttribute('material', {shader:'flat',src:sheet.toDataURL(),side:'double'});
+ card.appendChild(slip);
+ return slip;
+}
+const slips = orders.map(makeSlip);
+let timers = [];
+function reset() {
+ timers.forEach(clearTimeout);
+ timers = [];
+ slips.forEach(slip => {
+  slip.removeAttribute('animation');
+  slip.setAttribute('visible',false);
+ });
+}
+card.addEventListener('targetFound', () => {
+ reset();
+ guide.textContent = '주문한 적 없는 기대가 도착했습니다.';
+ orders.forEach(([, x, y, angle, delay], i) => {
+  timers.push(setTimeout(() => {
+   const slip = slips[i];
+   slip.setAttribute('rotation', [0,0,angle].join(' '));
+   slip.setAttribute('visible',true);
+   slip.setAttribute('animation',{property:'position',from:'0 0 0.01',to:[x,y,.09+i*.025].join(' '),dur:650,easing:'easeOutCubic'});
+  },delay));
+ });
+ timers.push(setTimeout(() => { guide.textContent = '이 중에 내가 원해서 주문한 기대는 몇 개일까요?'; },5200));
+});
+card.addEventListener('targetLost', () => {
+ reset();
+ guide.textContent = '카드 앞면을 다시 비춰주세요.';
+});
+document.querySelector('a-scene').addEventListener('arError', () => {
+ guide.textContent = '카메라 권한을 확인한 뒤 Safari에서 페이지를 다시 열어주세요.';
+});
+</script></body></html>
